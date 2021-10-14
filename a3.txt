@@ -78,11 +78,12 @@ src=~/CS185C/assignments/a3/PRODUCTS/0375826688.txt; id=0375826688; db=~/amazon_
 fgrep -h "$id" $db | cut -f9,14 > 8.tsv
 
 9)
-	First, I removed all stop words, html tags, 1-2 character words, and other punctuation that might be attached to words (', ", -, #, \) from the review body to remove general, common words.
+	In preparation for question 10, I removed all stop words, html tags, 1-2 character words, and other punctuation that might be attached to words (', ", -, #, \) from the review body to remove general, common words.
 	
 cut -f1 8.tsv > hscores; cut -f2 8.tsv | sed "s/[,.;'#-=\"\(\)\\]\|and\|<...\/>\|\<.\>\|\<..\>//gi" | paste hscores - > 8.tsv_edited
 
-	I then split them into files based on if the review had a helpfulness score of 0 or 1.
+10.
+	In order to find what words appear most frequently on the basis of helpfulness categories, I have to sort the words by wordcount. First, I split them into files based on if the review had a helpfulness score of 0 or 1.
 
 awk -F"\t" '$1~/0/ {print $2}' 8.tsv_edited > 8.tsv_edited-0
 awk -F"\t" '$1~/1/ {print $2}' 8.tsv_edited > 8.tsv_edited-1
@@ -97,11 +98,37 @@ cat 8.tsv_edited-1 | sed -r 's/[[:space:]]+/\n/g' | sed '/^$/d' | sort | uniq -c
 		- 1130 instances of "the" for reviews with helpfulness scores of 0 (There were 203 reviews.)
 		- 3034 instances of "the" for reviews with helpfulness scores of 1. (There were 374 reviews.)
 	
-	I realize the "the" is a rather general word, so I decided to also remove "the" from all review bodies.
-	Doing such, I now got the following:
-		- 551 instances of "book" for reviews with helpfulness scores of 0 (There were 203 reviews.)
-		- 1072 instances of "book" for reviews with helpfulness scores of 1. (There were 374 reviews.)
-		
-	This isn't too unexpected, considering that the product I was working with was Eragon from the Amazon book reviews database.
+	I realize the "the" is a rather general word, so I decided to also remove "the" from all review bodies. I also increased the number of top words to check to 10, updating the commands to be as follows:
+
+cat 8.tsv_edited-0 | sed -r 's/[[:space:]]+/\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n10
+cat 8.tsv_edited-1 | sed -r 's/[[:space:]]+/\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n10
+	
+	Using those commands, I got the following for helpfulness scores of 0:
+	
+    551 book
+    343 that
+    329 this
+    250 was
+    236 for
+    231 read
+    213 you
+    176 Eragon
+    159 but
+    151 have
+
+	I then got the following for helpfulness scores of 1:
+
+   1072 book
+    924 that
+    784 this
+    615 was
+    511 for
+    502 Eragon
+    494 you
+    416 with
+    416 but
+    415 read
+
+	It doesn't seem like there's much difference in word usage between the two; the only notable difference might be the fact that 'have' is in the top 10 for helpfulness scores of 0, while 'with' is in the top 10 for helpfulness scores of 1. This isn't too unexpected, considering that reviews will generally use words related to the topic at hand (in the case, reading) and that there's many general pronouns in the English language. If this is to be done again, a database of general English pronouns and conjunctions may be necessary for the sake of removing them through sed as well.
 
 Script done on 2021-10-14 11:52:10+00:00 [COMMAND_EXIT_CODE="0"]
