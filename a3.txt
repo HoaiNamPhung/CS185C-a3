@@ -1,0 +1,107 @@
+Script started on 2021-10-14 11:52:03+00:00 [TERM="xterm" TTY="/dev/pts/0" COLUMNS="80" LINES="23"]
+
+1) 
+	First, I computed the normalized helpfulness for each file and saved the results in-place as a new column (saved in column $4).
+
+src=~/CS185C/assignments/a3/CUSTOMERS; for file in ${src}/*; do awk '{if ($3!=0) print $2/$3; else print 0}' $file | paste $file - > tmp.txt; mv tmp.txt $file; done;
+
+src=~/CS185C/assignments/a3/PRODUCTS; for file in ${src}/*; do awk '{if ($3!=0) print $2/$3; else print 0}' $file | paste $file - > tmp.txt; mv tmp.txt $file; done;
+
+	Afterwards, I computed the median for each file and stored the results in another file of the same name, but appended with '_medianNHV'.
+
+src=~/CS185C/assignments/a3/CUSTOMERS; for file in ${src}/*; do sort -n $file | awk '{a[i++]=$4;} END {print a[int(i/2)];}' > tmp.txt; mv tmp.txt $(echo $file | sed 's/.txt/_medianNHV.txt/g'); done;
+
+src=~/CS185C/assignments/a3/PRODUCTS; for file in ${src}/*; do sort -n $file | awk '{a[i++]=$4;} END {print a[int(i/2)];}' > tmp.txt; mv tmp.txt $(echo $file | sed 's/.txt/_medianNHV.txt/g'); done;
+
+
+2) 
+	I used the following to compute for every file whether or not their normalized helpfulness values were higher or lower than their medians. (saved in column $5).
+
+src=~/CS185C/assignments/a3/CUSTOMERS; for file in ${src}/!(*_*); do median=$(echo $file | sed 's/.txt/_medianNHV.txt/g' | xargs cat); awk -v m=$median '{if ($4<m) print 0; else print 1}' $file | paste $file - > tmp.txt; mv tmp.txt $file; done;
+
+src=~/CS185C/assignments/a3/PRODUCTS; for file in ${src}/!(*_*); do median=$(echo $file | sed 's/.txt/_medianNHV.txt/g' | xargs cat); awk -v m=$median '{if ($4<m) print 0; else print 1}' $file | paste $file - > tmp.txt; mv tmp.txt $file; done;
+
+3)
+	Since I already had the results stored as a new column in the original file, I simply cut them out into a new file appended with '.BINARY.txt'.
+
+src=~/CS185C/assignments/a3/CUSTOMERS; for file in ${src}/!(*_*); do cut -f5 $file > $(echo $file | sed 's/.txt/.BINARY.txt/g'); done;
+
+src=~/CS185C/assignments/a3/PRODUCTS; for file in ${src}/!(*_*); do cut -f5 $file > $(echo $file | sed 's/.txt/.BINARY.txt/g'); done;
+
+4)
+	I recomputed the correlation scores as follows. (saved in column $6).
+
+src=~/CS185C/assignments/a3/CUSTOMERS; dest=~/CS185C/assignments/a3/cust_correlation.txt; for file in ${src}/!(*.*.txt); do val=`./datamash -W ppearson 1:4 < $file`; id=$(echo $file | sed -En 's/.*CUSTOMERS\/(.*).txt/\1/p'); echo "${id}        ${val}" >> $(echo $dest); done;
+
+src=~/CS185C/assignments/a3/PRODUCTS; dest=~/CS185C/assignments/a3/prod_correlation.txt; for file in ${src}/!(*.*.txt); do val=`./datamash -W ppearson 1:4 < $file`; id=$(echo $file | sed -En 's/.*PRODUCTS\/(.*).txt/\1/p'); echo "${id}  ${val}" >> $(echo $dest); done;
+
+	I then saved their max and min scores to files ahead of question 5 as such.
+
+src=~/CS185C/assignments/a3/cust_correlation.txt; sort -nr -k2 $src | head -n1 | cut -d ' ' -f1 > maxcustcorr.txt
+
+src=~/CS185C/assignments/a3/cust_correlation.txt; sort -n -k2 $src | head -n1 | cut -d ' ' -f1 > mincustcorr.txt
+
+src=~/CS185C/assignments/a3/prod_correlation.txt; sort -n -k2 $src | head -n1 | cut -d ' ' -f1 > minprodcorr.txt
+
+src=~/CS185C/assignments/a3/prod_correlation.txt; sort -nr -k2 $src | head -n1 | cut -d ' ' -f1 > maxprodcorr.txt
+
+5)
+	First, I stored the rating tars and helpfulness scores of the customer with the highest correlation score in a separate file by doing this command:
+
+maxcustcorr=$(cut -f1 maxcustcorr.txt); grep "$maxcustcorr" $db | cut -f8,9 > maxcuststats.tsv;
+
+	I then attempted to ssh from the remote linux servers to my local Windows computer, but couldn't get a connection to occur. The below commands all timed out and returned a 255 errorcode.
+
+ssh -vX localusername@localaddress 
+ssh -vY localusername@localaddress 
+
+	Since I can't figure out how to ssh correctly, I decided to just to send the correlation data to the cloud through GitHub. From there, I plotted the data as a line chart using Python 3 and matplotlib. The line chart can be found as "Plots.PNG".
+
+6)	
+	Like before, I stored the rating tars and helpfulness scores of the product with the highest correlation score in a separate file by doing this command:
+
+maxprodcorr=$(cut -f1 maxprodcorr.txt); grep "$maxprodcorr" $db | cut -f8,9 > maxprodstats.tsv;
+
+	I then did the same process for graphing the data as a line chart that can also be found in "Plots.PNG".
+
+7)
+	I believe that the correlation scores are much more meaningful now that in a2, as the correlation scores were now based on a set, normalized helpfulness ratio rather than a inconsistent, flat helpfulness score. There is no longer any bias towards products or customers that happen to have more traffic than others. In spite of such, while the correlation scores are more meaningful, I don't think there's any notable correlation between helpfulness scores and correlation scores. In "Plots.PNG", we see that as the number of helpfulness votes went up, the star ratings continue to oscillate in an unpredictable manner. This isn't too unexpected, as helpfulness scores are based on the quality of a review, rather than the quality of the product indicated by a star rating.
+
+8)
+	First, I chose a product id with a reasonable amount of lines, saving relevant info onto variables.
+	
+wc -l ~/CS185C/assignments/a3/PRODUCTS/* | sort -n
+src=~/CS185C/assignments/a3/PRODUCTS/0375826688.txt; id=0375826688; db=~/amazon_reviews_us_Books_v1_02.tsv;
+
+	Afterwards, I retrieved the helpfulness scores and review bodies of all reviews for the product, storing them into a new .tsv file.	
+	
+fgrep -h "$id" $db | cut -f9,14 > 8.tsv
+
+9)
+	First, I removed all stop words, html tags, 1-2 character words, and other punctuation that might be attached to words (', ", -, #, \) from the review body to remove general, common words.
+	
+cut -f1 8.tsv > hscores; cut -f2 8.tsv | sed "s/[,.;'#-=\"\(\)\\]\|and\|<...\/>\|\<.\>\|\<..\>//gi" | paste hscores - > 8.tsv_edited
+
+	I then split them into files based on if the review had a helpfulness score of 0 or 1.
+
+awk -F"\t" '$1~/0/ {print $2}' 8.tsv_edited > 8.tsv_edited-0
+awk -F"\t" '$1~/1/ {print $2}' 8.tsv_edited > 8.tsv_edited-1
+
+	I then replaced spaces with new lines in order to put each word on its own lines.
+	After removing empty lines, I could now get the word count using uniq.
+	
+cat 8.tsv_edited-0 | sed -r 's/[[:space:]]+/\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n1
+cat 8.tsv_edited-1 | sed -r 's/[[:space:]]+/\n/g' | sed '/^$/d' | sort | uniq -c | sort -nr | head -n1
+
+	Using those commands, I got:
+		- 1130 instances of "the" for reviews with helpfulness scores of 0 (There were 203 reviews.)
+		- 3034 instances of "the" for reviews with helpfulness scores of 1. (There were 374 reviews.)
+	
+	I realize the "the" is a rather general word, so I decided to also remove "the" from all review bodies.
+	Doing such, I now got the following:
+		- 551 instances of "book" for reviews with helpfulness scores of 0 (There were 203 reviews.)
+		- 1072 instances of "book" for reviews with helpfulness scores of 1. (There were 374 reviews.)
+		
+	This isn't too unexpected, considering that the product I was working with was Eragon from the Amazon book reviews database.
+
+Script done on 2021-10-14 11:52:10+00:00 [COMMAND_EXIT_CODE="0"]
